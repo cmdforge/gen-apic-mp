@@ -1,0 +1,44 @@
+{
+  "name": "@cmdforge/gen-apic-mp",
+  "description": "Generate a marketplace.zip containing the contents of an expected marketplace.git repository for the given Azure API Center portal.",
+  "version": "0.0.2",
+  "license": "MIT",
+  "type": "module",
+  "author": {
+    "name": "Fluttershy",
+    "url": "https://github.com/Fluttershy"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cmdforge/gen-apic-mp.git"
+  },
+  "bin": {
+    "gen-apic-mp": "./dist/server/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/shared/index.d.ts",
+      "import": "./dist/shared/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test --import tsx src/**/*.test.ts"
+  },
+  "dependencies": {
+    "commander": "15.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "25.9.3",
+    "typescript": "^5.8.0",
+    "tsx": "4.22.4"
+  },
+  "allowScripts": {
+    "esbuild": true,
+    "fsevents": true
+  }
+}
