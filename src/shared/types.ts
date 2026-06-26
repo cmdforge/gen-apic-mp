@@ -116,6 +116,10 @@ export type McpJson = {
   mcpServers: Record<string, McpServer>;
 };
 
+export type GenerateMcpServerOptions = {
+  metaKeys?: string[];
+};
+
 export type PluginJson = {
   name: string;
   description: string;

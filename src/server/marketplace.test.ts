@@ -80,9 +80,18 @@ test("translates nested server remotes and uses nested name", () => {
           url: "https://learn.microsoft.com/api/mcp",
         },
       ],
+      _meta: {
+        "custom.auth": {
+          clientId: "client-id",
+          publicClient: true,
+        },
+      },
     },
     _meta: {
-      "x-ms-id": "012a108b-f8d7-465e-92d6-63228a9e7af4",
+      "registry.id": "placeholder-id",
+      "custom.auth": {
+        clientId: "wrong-level",
+      },
     },
   };
 
@@ -90,6 +99,14 @@ test("translates nested server remotes and uses nested name", () => {
   assert.deepEqual(mcpServerFromV0Entry(entry), {
     transport: "sse",
     url: "https://learn.microsoft.com/api/mcp",
+  });
+  assert.deepEqual(mcpServerFromV0Entry(entry, {
+    metaKeys: ["custom.auth", "registry.id"],
+  }), {
+    transport: "sse",
+    url: "https://learn.microsoft.com/api/mcp",
+    clientId: "client-id",
+    publicClient: true,
   });
 });
 
@@ -121,6 +138,12 @@ test("falls back to first package when nested server has no remotes", () => {
         },
       ],
     },
+    _meta: {
+      "oauth-client": {
+        client_name: "example",
+      },
+      ignored: true,
+    },
   };
 
   assert.equal(mcpServerNameFromV0Entry(entry), "pkg-server");
@@ -131,5 +154,16 @@ test("falls back to first package when nested server has no remotes", () => {
     env: {
       API_KEY: "secret",
     },
+  });
+  assert.deepEqual(mcpServerFromV0Entry(entry, {
+    metaKeys: ["oauth-client"],
+  }), {
+    transport: "stdio",
+    command: "npx",
+    args: ["-y", "@example/pkg-server@1.2.3", "--mode", "test"],
+    env: {
+      API_KEY: "secret",
+    },
+    client_name: "example",
   });
 });

@@ -36,7 +36,7 @@ node dist/server/cli.js --help
 ## CLI
 
 ```bash
-gen-apic-mp <serviceName> <region> <workspaceName> [--unpack [directory]]
+gen-apic-mp <serviceName> <region> <workspaceName> [--unpack [directory]] [--mcp-meta <key>]
 ```
 
 Arguments:
@@ -48,6 +48,7 @@ Arguments:
 Option:
 
 - `--unpack [directory]`: write the generated marketplace tree directly into a directory instead of creating a zip
+- `--mcp-meta <key>`: include a specific `_meta` key from `v0/servers/{name}` in generated `.mcp.json` server entries
 
 If `--unpack` is provided without a value, it defaults to the current working directory, but only if that directory contains a `package.json`.
 
@@ -69,6 +70,18 @@ Unpack into a specific directory:
 
 ```bash
 gen-apic-mp my-api-center eastus marketplace --unpack /path/to/marketplace-repo
+```
+
+Include OAuth-related `_meta` in generated `.mcp.json`:
+
+```bash
+gen-apic-mp my-api-center eastus marketplace --mcp-meta oauth-client-provider
+```
+
+Include multiple `_meta` keys:
+
+```bash
+gen-apic-mp my-api-center eastus marketplace --mcp-meta oauth-client-provider --mcp-meta x-ms-id
 ```
 
 ## Output behavior
@@ -96,6 +109,8 @@ The translator supports:
 - direct remote-style entries with `url` and remote transport
 - nested `server.remotes`
 - nested `server.packages` as fallback when `remotes` is empty
+
+If `--mcp-meta` is used, only the requested `_meta` keys are copied into each generated MCP server entry.
 
 ## Current limitations
 

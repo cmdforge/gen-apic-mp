@@ -148,6 +148,51 @@ function compactObject<T extends Record<string, unknown>>(value: T): T {
   ) as T;
 }
 
+function pickRequestedMeta(
+  entry: types.V0ServerJsonEntry,
+  metaKeys: string[] = [],
+) {
+  if (metaKeys.length === 0) return undefined;
+
+  const record = asObject(entry);
+  const nestedServer = asObject(record?.server);
+  const metaSources = [
+    asObject(nestedServer?._meta),
+    asObject(record?._meta),
+  ].filter((value): value is Record<string, unknown> => !!value);
+
+  if (metaSources.length === 0) return undefined;
+
+  const requested: Record<string, unknown> = {};
+  for (const key of metaKeys) {
+    for (const source of metaSources) {
+      if (key in source) {
+        requested[key] = source[key];
+        break;
+      }
+    }
+  }
+
+  return Object.keys(requested).length > 0 ? requested : undefined;
+}
+
+function flattenRequestedMeta(
+  entry: types.V0ServerJsonEntry,
+  metaKeys: string[] = [],
+) {
+  const requestedMeta = pickRequestedMeta(entry, metaKeys);
+  if (!requestedMeta) return undefined;
+
+  const flattened: Record<string, unknown> = {};
+  for (const value of Object.values(requestedMeta)) {
+    const record = asObject(value);
+    if (!record) continue;
+    Object.assign(flattened, record);
+  }
+
+  return Object.keys(flattened).length > 0 ? flattened : undefined;
+}
+
 function argumentValue(argument: Record<string, unknown>) {
   const value = argument.value;
   if (value === undefined || value === null) return undefined;
@@ -282,6 +327,7 @@ export function mcpServerNameFromV0Entry(entry: types.V0ServerJsonEntry) {
 
 export function mcpServerFromV0Entry(
   entry: types.V0ServerJsonEntry,
+  options: types.GenerateMcpServerOptions = {},
 ): types.McpServer {
   if (!entry || typeof entry !== "object" || Array.isArray(entry))
     throw new Error("v0 server.json entry must be an object");
@@ -290,6 +336,7 @@ export function mcpServerFromV0Entry(
   if (!record)
     throw new Error("v0 server.json entry must be an object");
 
+  const meta = flattenRequestedMeta(entry, options.metaKeys);
   const transport = pickTransport(record);
   const command = pickString(record, ["command", "cmd"]);
   const url = pickString(record, ["url", "endpoint"]);
@@ -303,6 +350,7 @@ export function mcpServerFromV0Entry(
       args: asStringArray(record.args),
       env: asStringRecord(record.env),
       cwd: pickString(record, ["cwd"]),
+      ...meta,
     }) as types.McpServer;
   }
 
@@ -313,6 +361,7 @@ export function mcpServerFromV0Entry(
       transport: transport === "sse" ? "sse" : "http",
       url,
       headers: asStringRecord(record.headers),
+      ...meta,
     }) as types.McpServer;
   }
 
@@ -337,6 +386,7 @@ type PluginBuildResult = {
 async function buildPlugin(
   client: ApiCenterClient,
   plugin: types.PluginAsset,
+  options: types.GenerateMcpServerOptions = {},
 ): Promise<PluginBuildResult> {
   const pluginName = sanitizeName(plugin.name);
   const mcpServers: Record<string, types.McpServer> = {};
@@ -346,7 +396,7 @@ async function buildPlugin(
 
     const mcpAsset = await client.mcp(resource.resourceId);
     const serverEntry = await client.v0Server(mcpAsset.name);
-    mcpServers[mcpServerNameFromV0Entry(serverEntry)] = mcpServerFromV0Entry(serverEntry);
+    mcpServers[mcpServerNameFromV0Entry(serverEntry)] = mcpServerFromV0Entry(serverEntry, options);
   }
 
   const skills: string[] = [];
@@ -395,6 +445,7 @@ async function pathExists(path: string) {
 
 export type GenerateMarketplaceGitOptions = {
   unpack?: string;
+  mcpMetaKeys?: string[];
 };
 
 export async function generateMarketplaceGit(
@@ -413,7 +464,7 @@ export async function generateMarketplaceGit(
         if (item.kind !== "plugin") continue;
 
         const pluginAsset = await client.plugin(item.name);
-        const built = await buildPlugin(client, pluginAsset);
+        const built = await buildPlugin(client, pluginAsset, { metaKeys: options.mcpMetaKeys });
         const pluginDir = join(marketplaceRoot, "plugins", sanitizeName(pluginAsset.name));
 
         marketplacePlugins.push(built.marketplaceEntry);
