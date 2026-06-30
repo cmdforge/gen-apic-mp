@@ -1,3 +1,9 @@
+import type {
+  MarketplaceJson as TypeforgedCodexMarketplaceJson,
+  MarketplacePluginJson as TypeforgedCodexMarketplacePluginJson,
+  PluginJson as TypeforgedCodexPluginJson,
+} from "@typeforged/codex-plugin-marketplace/v1";
+
 export type WorkspaceInfo = {
   serviceName: string;
   region: string;
@@ -116,6 +122,22 @@ export type McpJson = {
   mcpServers: Record<string, McpServer>;
 };
 
+export type CodexMcp = {
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  cwd?: string;
+  transport?: 'http' | 'sse';
+  url?: string;
+  headers?: Record<string, string>;
+};
+
+export type CodexMcpJson =
+  | Record<string, CodexMcp>
+  | {
+    mcp_servers: Record<string, CodexMcp>;
+  };
+
 export type GenerateMcpServerOptions = {
   metaKeys?: string[];
 };
@@ -127,6 +149,7 @@ export type PluginJson = {
   mcpServers?: string;
   skills?: string[];
 };
+export type CodexPluginJson = TypeforgedCodexPluginJson;
 
 export type MarketplacePluginJson = {
   name: string;
@@ -160,6 +183,8 @@ export type MarketplaceJson = {
   };
   plugins: MarketplacePluginJson[];
 };
+export type CodexMarketplacePluginJson = TypeforgedCodexMarketplacePluginJson;
+export type CodexMarketplaceJson = TypeforgedCodexMarketplaceJson;
 
 export type McpAsset = McpAssetItem & {
   version?: string;

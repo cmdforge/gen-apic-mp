@@ -11,14 +11,29 @@ For a workspace, `gen-apic-mp` produces:
 ```text
 .github/plugin/marketplace.json
 .claude-plugin/marketplace.json
+.agents/plugins/marketplace.json
 plugins/{pluginName}/plugin.json
+plugins/{pluginName}/.codex-plugin/plugin.json
 plugins/{pluginName}/.mcp.json
+plugins/{pluginName}/.codex.mcp.json
 ```
 
 The generated `.mcp.json` only contains normal MCP server launch configuration:
 
 - stdio servers: `transport`, `command`, `args`, `env`, `cwd`
 - remote servers: `transport`, `url`, `headers`
+
+Codex-specific output uses the paths described by the Codex plugin docs and the `@typeforged/codex-plugin-marketplace` schema package:
+
+- repo marketplace: `.agents/plugins/marketplace.json`
+- plugin manifest: `plugins/{pluginName}/.codex-plugin/plugin.json`
+- plugin MCP config: `plugins/{pluginName}/.codex.mcp.json`
+
+Claude/Copilot-style output is aligned to the `@typeforged/claude-plugin-marketplaces` schema package:
+
+- marketplace catalog: `.claude-plugin/marketplace.json`
+- plugin manifest: `plugins/{pluginName}/plugin.json`
+- plugin MCP config: `plugins/{pluginName}/.mcp.json`
 
 ## Install
 

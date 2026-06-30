@@ -1,7 +1,7 @@
 {
   "name": "@cmdforge/gen-apic-mp",
   "description": "Generate a marketplace.zip containing the contents of an expected marketplace.git repository for the given Azure API Center portal.",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "license": "MIT",
   "type": "module",
   "author": {
@@ -30,7 +30,9 @@
     "test": "node --test --import tsx src/**/*.test.ts"
   },
   "dependencies": {
-    "commander": "15.0.0"
+    "commander": "15.0.0",
+    "@typeforged/codex-plugin-marketplace": "1.0.1",
+    "@typeforged/claude-plugin-marketplaces": "1.0.1"
   },
   "devDependencies": {
     "@types/node": "25.9.3",

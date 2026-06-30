@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {
+  MarketplaceSchema as ClaudeMarketplaceSchema,
+  PluginSchema as ClaudePluginSchema,
+} from "@typeforged/claude-plugin-marketplaces/v1";
 
 import {
+  codexMcpJsonFromMcpJson,
   mcpServerFromV0Entry,
   mcpServerNameFromV0Entry,
   mcpServersFromServerJson,
@@ -166,4 +171,99 @@ test("falls back to first package when nested server has no remotes", () => {
     },
     client_name: "example",
   });
+});
+
+test("projects MCP config to Codex format and drops extra properties", () => {
+  assert.deepEqual(
+    codexMcpJsonFromMcpJson({
+      mcpServers: {
+        remote: {
+          transport: "sse",
+          url: "https://example.test/mcp",
+          headers: {
+            Authorization: "Bearer token",
+          },
+          oauthClientId: "client-id",
+          oauthPublicClient: true,
+        },
+        stdio: {
+          transport: "stdio",
+          command: "npx",
+          args: ["-y", "@example/server"],
+          env: {
+            API_KEY: "secret",
+          },
+          cwd: "/tmp/example",
+          extra: "ignored",
+        },
+      },
+    }),
+    {
+      mcp_servers: {
+        remote: {
+          transport: "sse",
+          url: "https://example.test/mcp",
+          headers: {
+            Authorization: "Bearer token",
+          },
+        },
+        stdio: {
+          command: "npx",
+          args: ["-y", "@example/server"],
+          env: {
+            API_KEY: "secret",
+          },
+          cwd: "/tmp/example",
+        },
+      },
+    },
+  );
+});
+
+test("current Claude plugin manifest shape matches typeforged schema", () => {
+  const currentPluginJson = {
+    name: "example-plugin",
+    description: "Example plugin",
+    version: "1.0.0",
+    mcpServers: "./.mcp.json",
+    skills: ["./skills/"],
+  };
+
+  assert.deepEqual(
+    ClaudePluginSchema.parse(currentPluginJson),
+    currentPluginJson,
+  );
+});
+
+test("current Claude marketplace manifest shape matches typeforged schema", () => {
+  const currentMarketplaceJson = {
+    name: "Example Marketplace",
+    metadata: {
+      description: "Example marketplace",
+      version: "1.0.0",
+    },
+    owner: {
+      name: "Example Owner",
+    },
+    plugins: [
+      {
+        name: "example-plugin",
+        source: "./plugins/example-plugin",
+        description: "Example plugin",
+        version: "1.0.0",
+        skills: [],
+      },
+    ],
+  };
+
+  assert.deepEqual(
+    ClaudeMarketplaceSchema.parse(currentMarketplaceJson),
+    {
+      ...currentMarketplaceJson,
+      plugins: currentMarketplaceJson.plugins.map(plugin => ({
+        ...plugin,
+        strict: true,
+      })),
+    },
+  );
 });

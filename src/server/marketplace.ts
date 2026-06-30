@@ -83,6 +83,14 @@ function sanitizeName(value: string) {
     .replace(/^-+|-+$/g, "") || "unnamed";
 }
 
+function sanitizeKebabName(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "unnamed";
+}
+
 function asStringRecord(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value))
     return undefined;
@@ -377,10 +385,38 @@ export function mcpServersFromServerJson(serverJson: types.ServerJson) {
   ) satisfies Record<string, types.McpServer>;
 }
 
+export function codexMcpFromMcpServer(server: types.McpServer): types.CodexMcp {
+  if (server.transport === "stdio") {
+    return compactObject({
+      command: server.command,
+      args: asStringArray(server.args),
+      env: asStringRecord(server.env),
+      cwd: pickString(server, ["cwd"]),
+    }) satisfies types.CodexMcp;
+  }
+
+  return compactObject({
+    transport: server.transport,
+    url: server.url,
+    headers: asStringRecord(server.headers),
+  }) satisfies types.CodexMcp;
+}
+
+export function codexMcpJsonFromMcpJson(mcpJson: types.McpJson): types.CodexMcpJson {
+  return {
+    mcp_servers: Object.fromEntries(
+      Object.entries(mcpJson.mcpServers).map(([name, server]) => [name, codexMcpFromMcpServer(server)]),
+    ),
+  };
+}
+
 type PluginBuildResult = {
   mcpJson: types.McpJson;
+  codexMcpJson: types.CodexMcpJson;
   pluginJson: types.PluginJson;
+  codexPluginJson: types.CodexPluginJson;
   marketplaceEntry: types.MarketplacePluginJson;
+  codexMarketplaceEntry: types.CodexMarketplacePluginJson;
 };
 
 async function buildPlugin(
@@ -389,6 +425,7 @@ async function buildPlugin(
   options: types.GenerateMcpServerOptions = {},
 ): Promise<PluginBuildResult> {
   const pluginName = sanitizeName(plugin.name);
+  const codexPluginName = sanitizeKebabName(plugin.name);
   const mcpServers: Record<string, types.McpServer> = {};
 
   for (const resource of plugin.resources) {
@@ -405,22 +442,56 @@ async function buildPlugin(
     description: plugin.description || plugin.summary,
     version: plugin.version,
   };
+  const codexPluginJson: types.CodexPluginJson = {
+    name: codexPluginName,
+    description: plugin.description || plugin.summary,
+    version: plugin.version,
+    interface: {
+      displayName: plugin.title || plugin.name,
+      shortDescription: plugin.description || plugin.summary,
+      developerName: "Azure API Center",
+      category: "Developer Tools",
+    },
+  };
+  const mcpJson: types.McpJson = { mcpServers };
 
-  if (Object.keys(mcpServers).length > 0)
-    pluginJson.mcpServers = ".mcp.json";
+  if (Object.keys(mcpServers).length > 0) {
+    pluginJson.mcpServers = "./.mcp.json";
+    codexPluginJson.mcpServers = "./.codex.mcp.json";
+  }
 
-  if (skills.length > 0)
+  if (skills.length > 0) {
     pluginJson.skills = ["./skills/"];
+    codexPluginJson.skills = "./skills/";
+  }
 
   return {
-    mcpJson: { mcpServers },
+    mcpJson,
+    codexMcpJson: codexMcpJsonFromMcpJson(mcpJson),
     pluginJson,
+    codexPluginJson,
     marketplaceEntry: {
       name: plugin.name,
       version: plugin.version,
       description: plugin.description || plugin.summary,
-      source: `plugins/${pluginName}`,
+      source: `./plugins/${pluginName}`,
       skills,
+    },
+    codexMarketplaceEntry: {
+      name: codexPluginName,
+      source: {
+        source: "local",
+        path: `./plugins/${pluginName}`,
+      },
+      policy: {
+        installation: "AVAILABLE",
+        authentication: "ON_USE",
+      },
+      category: "Developer Tools",
+      interface: {
+        displayName: plugin.title || plugin.name,
+        description: plugin.description || plugin.summary,
+      },
     },
   };
 }
@@ -457,6 +528,7 @@ export async function generateMarketplaceGit(
   const tempRoot = await mkdtemp(join(tmpdir(), "gen-apic-mp-"));
   const marketplaceRoot = join(tempRoot, "marketplace");
   const marketplacePlugins: types.MarketplacePluginJson[] = [];
+  const codexMarketplacePlugins: types.CodexMarketplacePluginJson[] = [];
 
   try {
     for await (const page of client.apis()) {
@@ -468,8 +540,11 @@ export async function generateMarketplaceGit(
         const pluginDir = join(marketplaceRoot, "plugins", sanitizeName(pluginAsset.name));
 
         marketplacePlugins.push(built.marketplaceEntry);
+        codexMarketplacePlugins.push(built.codexMarketplaceEntry);
         await writeJson(join(pluginDir, "plugin.json"), built.pluginJson);
+        await writeJson(join(pluginDir, ".codex-plugin", "plugin.json"), built.codexPluginJson);
         await writeJson(join(pluginDir, ".mcp.json"), built.mcpJson);
+        await writeJson(join(pluginDir, ".codex.mcp.json"), built.codexMcpJson);
       }
     }
 
@@ -484,9 +559,17 @@ export async function generateMarketplaceGit(
       },
       plugins: marketplacePlugins,
     };
+    const codexMarketplaceJson: types.CodexMarketplaceJson = {
+      name: sanitizeKebabName(info.workspaceName || config.title),
+      interface: {
+        displayName: config.title,
+      },
+      plugins: codexMarketplacePlugins,
+    };
 
     await writeJson(join(marketplaceRoot, ".github", "plugin", "marketplace.json"), marketplaceJson);
     await writeJson(join(marketplaceRoot, ".claude-plugin", "marketplace.json"), marketplaceJson);
+    await writeJson(join(marketplaceRoot, ".agents", "plugins", "marketplace.json"), codexMarketplaceJson);
 
     const unpackPath = options.unpack ? resolve(options.unpack) : undefined;
     if (unpackPath) {
