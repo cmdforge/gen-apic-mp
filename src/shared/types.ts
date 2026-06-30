@@ -127,7 +127,7 @@ export type CodexMcp = {
   args?: string[];
   env?: Record<string, string>;
   cwd?: string;
-  transport?: 'http' | 'sse';
+  type?: 'stdio' | 'http' | 'sse';
   url?: string;
   headers?: Record<string, string>;
 };

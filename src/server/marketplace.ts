@@ -388,6 +388,7 @@ export function mcpServersFromServerJson(serverJson: types.ServerJson) {
 export function codexMcpFromMcpServer(server: types.McpServer): types.CodexMcp {
   if (server.transport === "stdio") {
     return compactObject({
+      type: "stdio",
       command: server.command,
       args: asStringArray(server.args),
       env: asStringRecord(server.env),
@@ -396,7 +397,7 @@ export function codexMcpFromMcpServer(server: types.McpServer): types.CodexMcp {
   }
 
   return compactObject({
-    transport: server.transport,
+    type: server.transport,
     url: server.url,
     headers: asStringRecord(server.headers),
   }) satisfies types.CodexMcp;

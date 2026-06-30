@@ -201,13 +201,14 @@ test("projects MCP config to Codex format and drops extra properties", () => {
     {
       mcp_servers: {
         remote: {
-          transport: "sse",
+          type: "sse",
           url: "https://example.test/mcp",
           headers: {
             Authorization: "Bearer token",
           },
         },
         stdio: {
+          type: "stdio",
           command: "npx",
           args: ["-y", "@example/server"],
           env: {
